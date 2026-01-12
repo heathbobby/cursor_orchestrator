@@ -56,6 +56,18 @@ def default_config() -> dict[str, Any]:
                 "tools",
             ],
         },
+        "providers": {
+            "github": {
+                "api_base": "https://api.github.com",
+                "token_env_var": "GITHUB_TOKEN",
+                "default_repo": None,  # e.g. "owner/name"
+                "default_state": "open",
+                "per_page": 100,
+                "max_issues": 200,
+                "include_pull_requests": False,
+                "dest_subdir": "github/issues",
+            }
+        },
         "cursor": {
             "enabled": False,
             "auto_open_worktrees": False,

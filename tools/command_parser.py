@@ -121,6 +121,7 @@ class CommandValidator:
         'update_knowledge',
         'render_status',
         'update_framework',
+        'sync_work_items',
     }
     
     # Known integrator commands
@@ -202,6 +203,11 @@ class CommandValidator:
 
         if cmd.command == 'update_framework' and len(cmd.args) > 2:
             return False, f"update_framework accepts 0-2 args ([source][, dry-run]), got {len(cmd.args)}"
+
+        if cmd.command == 'sync_work_items' and len(cmd.args) < 1:
+            return False, "sync_work_items requires at least 1 arg (provider)"
+        if cmd.command == 'sync_work_items' and len(cmd.args) > 4:
+            return False, f"sync_work_items accepts up to 4 args (provider[, repo][, state][, dry-run]), got {len(cmd.args)}"
 
         return True, None
     

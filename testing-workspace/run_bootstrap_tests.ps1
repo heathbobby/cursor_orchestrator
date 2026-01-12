@@ -137,6 +137,12 @@ foreach ($p in $projects) {
       if ($LASTEXITCODE -ne 0) { throw "update_framework dry-run failed for $p" }
     }
 
+    # Work item sync (dry-run, no network)
+    if ($p -eq "python-sample") {
+      python .\orchestration-framework\cli.py execute "/orchestrator::sync_work_items(github, octocat/Hello-World, open, dry-run)" | Out-Null
+      if ($LASTEXITCODE -ne 0) { throw "sync_work_items github dry-run failed for $p" }
+    }
+
     # Knowledgebase + prompt refinement + status report (safe generators)
     if ($p -eq "python-sample") {
       python .\orchestration-framework\cli.py execute "/orchestrator::update_knowledge" | Out-Null

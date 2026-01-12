@@ -1130,6 +1130,92 @@ def handle_update_framework(cmd: ParsedCommand, ctx: dict) -> CommandResult:
     )
 
 
+@register_handler('orchestrator', 'sync_work_items')
+def handle_sync_work_items(cmd: ParsedCommand, ctx: dict) -> CommandResult:
+    """
+    Handle /orchestrator::sync_work_items(provider[, repo][, state][, dry-run]).
+
+    Currently supported providers:
+      - github (GitHub Issues)
+    """
+    from pathlib import Path
+
+    repo_root = Path(ctx.get("repo_root", Path.cwd()))
+    config = ctx.get("config") or {}
+    orch = config.get("orchestration") or {}
+    providers_cfg = config.get("providers") or {}
+
+    args = cmd.args or []
+    dry_run = "dry-run" in args
+    parts = [a for a in args if a != "dry-run"]
+    provider = parts[0] if parts else ""
+
+    # Parse optional repo + state in any order (simple heuristics).
+    repo_arg: str | None = None
+    state_arg: str | None = None
+    for a in parts[1:]:
+        if a in ("open", "closed", "all"):
+            state_arg = a
+        elif "/" in a and "://" not in a:
+            repo_arg = a
+
+    work_items_dir = repo_root / (orch.get("work_items_dir") or "work_items")
+
+    if provider == "github":
+        gh = (providers_cfg.get("github") or {})
+        repo_name = repo_arg or gh.get("default_repo")
+        if not repo_name:
+            return CommandResult(
+                success=False,
+                message="GitHub provider requires repo (owner/name) via args or providers.github.default_repo",
+                data={"provider": "github"},
+            )
+        state = state_arg or gh.get("default_state") or "open"
+        dest_subdir = gh.get("dest_subdir") or "github/issues"
+        dest_dir = work_items_dir / dest_subdir
+
+        try:
+            from .providers.github_issues import sync_github_issues
+        except ImportError:
+            from providers.github_issues import sync_github_issues
+
+        res = sync_github_issues(
+            repo_root=repo_root,
+            repo=str(repo_name),
+            state=str(state),
+            dest_dir=dest_dir,
+            api_base=str(gh.get("api_base") or "https://api.github.com"),
+            token_env_var=str(gh.get("token_env_var") or "GITHUB_TOKEN"),
+            per_page=int(gh.get("per_page") or 100),
+            max_issues=int(gh.get("max_issues") or 200),
+            include_pull_requests=bool(gh.get("include_pull_requests") or False),
+            dry_run=dry_run,
+        )
+
+        return CommandResult(
+            success=res.success,
+            message=res.message,
+            data={
+                "provider": "github",
+                "dry_run": res.dry_run,
+                "repo": res.repo,
+                "state": res.state,
+                "dest_dir": str(res.dest_dir),
+                "fetched": res.fetched,
+                "written": res.written,
+                "updated": res.updated,
+                "skipped": res.skipped,
+                "errors": res.errors,
+            },
+        )
+
+    return CommandResult(
+        success=False,
+        message=f"Unknown provider: {provider}",
+        data={"supported": ["github"]},
+    )
+
+
 @register_handler('integrator', 'apply_ready')
 def handle_apply_ready(cmd: ParsedCommand, ctx: dict) -> CommandResult:
     """

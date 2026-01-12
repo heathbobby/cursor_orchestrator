@@ -98,6 +98,18 @@ If `source` is omitted, the framework will use `updates.source` from `.orchestra
 
 ---
 
+#### `/orchestrator::sync_work_items(github[, <owner>/<repo>][, open|closed|all][, dry-run])`
+
+**Intent**: Import external work items into `work_items/` (GitHub Issues provider)
+
+**Expected Output**:
+- Creates/updates markdown work items under: `work_items/github/issues/`
+
+**Auth**:
+- Set `GITHUB_TOKEN` (or configure `providers.github.token_env_var`) to increase API rate limits.
+
+---
+
 #### `/orchestrator::start_workflow(<workflow>, <phase>, <iteration>)`
 
 **Intent**: Start complete workflow with all agents in isolated worktrees

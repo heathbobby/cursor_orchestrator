@@ -473,6 +473,17 @@ updates:
     - "templates"
     - "tools"
 
+providers:
+  github:
+    api_base: "https://api.github.com"
+    token_env_var: "GITHUB_TOKEN"
+    default_repo: null # e.g. "owner/name"
+    default_state: "open"
+    per_page: 100
+    max_issues: 200
+    include_pull_requests: false
+    dest_subdir: "github/issues"
+
 token_budget:
   default_per_agent: 20000
   risk_thresholds:
