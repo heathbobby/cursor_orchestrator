@@ -126,6 +126,22 @@ foreach ($p in $projects) {
 
     python .\orchestration-framework\cli.py execute "/integrator::apply_ready(dry-run)" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "apply_ready dry-run failed for $p" }
+
+    # Task hygiene: archive iteration task cards (only for python-sample, where we already enable cursor + extra steps)
+    if ($p -eq "python-sample") {
+      python .\orchestration-framework\cli.py execute "/orchestrator::archive_tasks(iteration-1)" | Out-Null
+      if ($LASTEXITCODE -ne 0) { throw "archive_tasks failed for $p" }
+
+      # Ensure the active tasks directory is clean for this iteration.
+      $idxGlob = Join-Path $projRoot ".orchestration\\runtime\\agent-sync\\tasks\\*_iteration-1_INDEX.md"
+      if (Test-Path $idxGlob) { throw "archive_tasks did not remove iteration index from tasks dir ($idxGlob)" }
+
+      # Ensure an archived index exists somewhere under the archive root.
+      $archRoot = Join-Path $projRoot ".orchestration\\runtime\\agent-sync\\tasks\\_archive\\iteration-1"
+      Assert-PathExists $archRoot "Missing archive root after archive_tasks"
+      $archIdx = Get-ChildItem $archRoot -Recurse -Filter "*_iteration-1_INDEX.md" | Select-Object -First 1
+      if (!$archIdx) { throw "Archived index not found under $archRoot" }
+    }
   } finally {
     Pop-Location
   }

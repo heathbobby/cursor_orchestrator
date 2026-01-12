@@ -56,6 +56,16 @@ Commands are written like:
 
 ---
 
+#### `/orchestrator::archive_tasks(<iteration>[, dry-run])`
+
+**Intent**: Archive completed task cards (and the INDEX) to keep `tasks/` clean over time
+
+**Expected Output**:
+- Move latest `*_<iteration>_INDEX.md` and all linked `*.md` task cards to:
+  - `.orchestration/runtime/agent-sync/tasks/_archive/<iteration>/<timestamp>/`
+
+---
+
 #### `/orchestrator::start_workflow(<workflow>, <phase>, <iteration>)`
 
 **Intent**: Start complete workflow with all agents in isolated worktrees
@@ -113,6 +123,15 @@ python orchestration-framework/tools/generate_prompts.py \
 python orchestration-framework/tools/monitor_enhanced.sh \
   iterations/<iteration>/
 ```
+
+---
+
+#### `/orchestrator::launch_agents(<iteration>[, parallel][, max_parallel][, apply-ready][, apply-ready-each][, archive-tasks][, dry-run])`
+
+**Intent**: Automatically execute task cards via Cursor CLI `agent`
+
+**Notes**:
+- `archive-tasks`: after a successful run, archives the iteration task cards + INDEX under `tasks/_archive/`.
 
 ---
 

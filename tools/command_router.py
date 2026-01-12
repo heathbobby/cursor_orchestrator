@@ -565,6 +565,7 @@ def handle_launch_agents(cmd: ParsedCommand, ctx: dict) -> CommandResult:
     parallel = "parallel" in args
     apply_ready_flag = any(a.startswith("apply-ready") or a == "apply_ready" for a in args)
     apply_ready_each = "apply-ready-each" in args or "apply_ready_each" in args
+    archive_tasks_flag = "archive-tasks" in args or "archive_tasks" in args
 
     # Optional: apply-ready target override: apply-ready=<branch>
     apply_ready_target: str | None = None
@@ -814,6 +815,36 @@ def handle_launch_agents(cmd: ParsedCommand, ctx: dict) -> CommandResult:
             auto_integrate_result = {"success": False, "error": str(e)}
             ok = False
 
+    # Optional: archive task cards + index to keep tasks directory clean.
+    archive_result: dict | None = None
+    if (not dry_run) and ok and archive_tasks_flag:
+        try:
+            try:
+                from .task_archiver import archive_iteration_tasks
+            except ImportError:
+                from task_archiver import archive_iteration_tasks
+            commands_cfg = config.get("commands") or {}
+            archive_root = repo_root / (commands_cfg.get("task_archive_dir") or str(tasks_dir / "_archive"))
+            ar = archive_iteration_tasks(
+                tasks_dir=tasks_dir,
+                iteration=iteration,
+                archive_root=archive_root,
+                dry_run=False,
+                index_path=index_path,
+                card_paths=card_paths,
+            )
+            archive_result = {
+                "success": ar.success,
+                "message": ar.message,
+                "archive_dir": str(ar.archive_dir) if ar.archive_dir else None,
+                "moved_count": len(ar.moved or []),
+                "skipped_count": len(ar.skipped or []),
+            }
+            ok = ok and ar.success
+        except Exception as e:
+            archive_result = {"success": False, "error": str(e)}
+            ok = False
+
     return CommandResult(
         success=ok,
         message=f"launch_agents processed {len(card_paths)} task(s) from {index_path.name}",
@@ -824,11 +855,13 @@ def handle_launch_agents(cmd: ParsedCommand, ctx: dict) -> CommandResult:
             "max_parallel": max_parallel,
             "apply_ready_requested": apply_ready_flag,
             "apply_ready_each": apply_ready_each,
+            "archive_tasks": archive_tasks_flag,
             "apply_ready_target": apply_ready_target,
             "integrate_runs": integrate_runs,
             "allow_auto_apply_ready": allow_auto,
             "auto_integrate_ran": auto_integrate_ran,
             "auto_integrate_result": auto_integrate_result,
+            "archive_result": archive_result,
             "index": str(index_path),
             "tasks": [str(p) for p in card_paths],
             "launched": launched,
@@ -948,6 +981,46 @@ def handle_derive_roles(cmd: ParsedCommand, ctx: dict) -> CommandResult:
             "derived_roles_path": str(write_res.derived_path),
             "cursor_rule_path": str(write_res.cursor_rule_path) if write_res.cursor_rule_path else None,
             "recommended_roles": [r.get("role") for r in (derived.get("recommended_roles") or [])],
+        },
+    )
+
+
+@register_handler('orchestrator', 'archive_tasks')
+def handle_archive_tasks(cmd: ParsedCommand, ctx: dict) -> CommandResult:
+    """
+    Handle /orchestrator::archive_tasks(iteration[, dry-run]).
+
+    Archives (moves) the latest `*_<iteration>_INDEX.md` plus all referenced task cards
+    into: `<task_archive_dir>/<iteration>/<timestamp>/`.
+    """
+    from pathlib import Path
+    try:
+        from .task_archiver import archive_iteration_tasks
+    except ImportError:
+        from task_archiver import archive_iteration_tasks
+
+    iteration = cmd.args[0]
+    dry_run = len(cmd.args) == 2 and cmd.args[1] == "dry-run"
+
+    repo_root = Path(ctx.get("repo_root", Path.cwd()))
+    config = ctx.get("config") or {}
+    commands_cfg = config.get("commands") or {}
+
+    tasks_dir = repo_root / (commands_cfg.get("task_cards_dir") or "agent-sync/tasks")
+    archive_root = repo_root / (commands_cfg.get("task_archive_dir") or (str(tasks_dir / "_archive")))
+
+    res = archive_iteration_tasks(tasks_dir=tasks_dir, iteration=iteration, archive_root=archive_root, dry_run=dry_run)
+    return CommandResult(
+        success=res.success,
+        message=res.message,
+        data={
+            "iteration": iteration,
+            "dry_run": dry_run,
+            "tasks_dir": str(tasks_dir),
+            "archive_root": str(archive_root),
+            "archive_dir": str(res.archive_dir) if res.archive_dir else None,
+            "moved": res.moved or [],
+            "skipped": res.skipped or [],
         },
     )
 

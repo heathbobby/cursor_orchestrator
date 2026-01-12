@@ -389,6 +389,10 @@ integration:
     - check_test_coverage
   auto_merge_to_trunk: false
 
+commands:
+  task_cards_dir: ".orchestration/runtime/agent-sync/tasks"
+  task_archive_dir: ".orchestration/runtime/agent-sync/tasks/_archive"
+
 token_budget:
   default_per_agent: 20000
   risk_thresholds:

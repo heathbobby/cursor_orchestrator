@@ -117,6 +117,7 @@ class CommandValidator:
         'apply_ready_to',
         'ingest_project',
         'derive_roles',
+        'archive_tasks',
     }
     
     # Known integrator commands
@@ -174,8 +175,8 @@ class CommandValidator:
 
         if cmd.command == 'launch_agents' and len(cmd.args) < 1:
             return False, "launch_agents requires at least 1 arg (iteration)"
-        if cmd.command == 'launch_agents' and len(cmd.args) > 6:
-            return False, f"launch_agents accepts up to 6 args (iteration[, parallel][, max_parallel][, apply-ready][, apply-ready-each][, dry-run]), got {len(cmd.args)}"
+        if cmd.command == 'launch_agents' and len(cmd.args) > 7:
+            return False, f"launch_agents accepts up to 7 args (iteration[, parallel][, max_parallel][, apply-ready][, apply-ready-each][, archive-tasks][, dry-run]), got {len(cmd.args)}"
         
         if cmd.command == 'apply_ready_to' and len(cmd.args) not in (1, 2):
             return False, f"apply_ready_to requires 1-2 args (target_branch[, dry-run]), got {len(cmd.args)}"
@@ -185,6 +186,9 @@ class CommandValidator:
 
         if cmd.command == 'derive_roles' and len(cmd.args) > 2:
             return False, f"derive_roles accepts 0-2 args ([path][, dry-run]), got {len(cmd.args)}"
+
+        if cmd.command == 'archive_tasks' and len(cmd.args) not in (1, 2):
+            return False, f"archive_tasks requires 1-2 args (iteration[, dry-run]), got {len(cmd.args)}"
 
         return True, None
     

@@ -26,7 +26,10 @@ def default_config() -> dict[str, Any]:
             "allow_auto_apply_ready": False,
         },
         "integration": {"target_branch_pattern": "integration/{date}", "auto_merge_to_trunk": False},
-        "commands": {"task_cards_dir": ".orchestration/runtime/agent-sync/tasks"},
+        "commands": {
+            "task_cards_dir": ".orchestration/runtime/agent-sync/tasks",
+            "task_archive_dir": ".orchestration/runtime/agent-sync/tasks/_archive",
+        },
         "cursor": {
             "enabled": False,
             "auto_open_worktrees": False,
