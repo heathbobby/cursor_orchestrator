@@ -36,6 +36,26 @@ Commands are written like:
 
 ### Orchestrator Commands
 
+#### `/orchestrator::ingest_project([path][, dry-run])`
+
+**Intent**: Generate lightweight project profile + agent-readable context
+
+**Expected Output**:
+- `.orchestration/config/project_profile.yaml`
+- `.orchestration/config/PROJECT_CONTEXT.md`
+
+---
+
+#### `/orchestrator::derive_roles([path][, dry-run])`
+
+**Intent**: Recommend agent roles for this project based on an ingestion scan
+
+**Expected Output**:
+- `.orchestration/config/derived_roles.yaml`
+- `.cursor/rules/30-derived-roles.mdc` (only if Cursor integration is enabled)
+
+---
+
 #### `/orchestrator::start_workflow(<workflow>, <phase>, <iteration>)`
 
 **Intent**: Start complete workflow with all agents in isolated worktrees

@@ -78,9 +78,6 @@ def create_directory_structure(repo_root: Path, config: dict) -> None:
         
         # Workflows and templates
         repo_root / config["orchestration"]["workflows_dir"],
-        
-        # Documentation output
-        repo_root / "documentation",
     ]
     
     # Cursor rules if enabled
@@ -230,16 +227,9 @@ This will:
 - Run merge gate checks (validation, tests, coverage)
 - Update memos to ready-to-merge
 
-## Framework Documentation
-
-- **Getting Started**: `orchestration-framework/README.md`
-- **Command Reference**: `{config['coordination']['agent_sync_dir']}/COMMAND_SHORTHAND.md`
-- **Workflow Catalog**: `orchestration-framework/WORKFLOW_CATALOG.md`
-- **Agent Roles**: `orchestration-framework/AGENT_ROLE_LIBRARY.md`
-
 ## Configuration
 
-Framework configuration is in: `orchestration-framework/config.yaml`
+Framework configuration is in: `.orchestration/config/framework.yaml`
 
 Customize:
 - Project name and trunk branch
@@ -250,8 +240,7 @@ Customize:
 
 ## Getting Help
 
-- Read the framework docs in `orchestration-framework/`
-- Check examples in `orchestration-framework/examples/`
+- Review command shorthand: `{config['coordination']['agent_sync_dir']}/COMMAND_SHORTHAND.md`
 - Review completed iterations in `{config['orchestration']['iterations_dir']}/`
 """
     
@@ -328,17 +317,46 @@ def setup_cursor_rules(repo_root: Path, framework_dir: Path, config: dict) -> No
     print_success("Cursor rules set up")
 
 
+def setup_cursor_agent_file(repo_root: Path, framework_dir: Path, config: dict) -> None:
+    """
+    Create `.cursor/agent.md` so Cursor agents have a stable, project-local bootstrap doc.
+    """
+    if not config["cursor"]["enabled"]:
+        return
+
+    cursor_dir = repo_root / ".cursor"
+    cursor_dir.mkdir(parents=True, exist_ok=True)
+
+    template_path = framework_dir / "templates" / "agent.md"
+    dest = cursor_dir / "agent.md"
+
+    if dest.exists():
+        print_info(".cursor/agent.md already exists (skipping)")
+        return
+
+    if template_path.exists():
+        shutil.copy(template_path, dest)
+        print_success("Created .cursor/agent.md")
+    else:
+        # Fallback minimal file if template is missing
+        dest.write_text(
+            "# Cursor Agent Bootstrap\n\nSee `.orchestration/runtime/agent-sync/COMMAND_SHORTHAND.md`.\n",
+            encoding="utf-8",
+        )
+        print_success("Created .cursor/agent.md (fallback)")
+
+
 def create_config(repo_root: Path, framework_dir: Path, config: dict) -> None:
     """Create config.yaml if it doesn't exist."""
-    config_path = repo_root / "orchestration-framework" / "config.yaml"
+    config_path = repo_root / ".orchestration" / "config" / "framework.yaml"
     
     if config_path.exists():
-        print_info("config.yaml already exists (skipping)")
+        print_info("framework.yaml already exists (skipping)")
         return
     
-    print_info("Creating config.yaml...")
+    print_info("Creating framework.yaml...")
     
-    config_content = f"""# Generic Orchestration Framework Configuration
+    config_content = f"""# Generic Orchestration Framework Configuration (Project)
 
 project:
   name: "{config['project']['name']}"
@@ -587,6 +605,9 @@ Examples:
         
         setup_cursor_rules(repo_root, framework_dir, config)
         print()
+
+        setup_cursor_agent_file(repo_root, framework_dir, config)
+        print()
         
         create_config(repo_root, framework_dir, config)
         print()
@@ -597,17 +618,14 @@ Examples:
         print_header("Bootstrap Complete!")
         
         print("\nNext Steps:\n")
-        print("1. Review and customize: orchestration-framework/config.yaml")
+        print("1. Review and customize: .orchestration/config/framework.yaml")
         print(f"2. Review command reference: {config['coordination']['agent_sync_dir']}/COMMAND_SHORTHAND.md")
         print(f"3. Create your first workflow in: {config['orchestration']['workflows_dir']}/")
         print("4. Start orchestration:")
         print("   /orchestrator::start_workflow(<workflow>, <phase>, <iteration>)")
-        print()
-        print("Documentation:")
-        print("  - Framework overview: orchestration-framework/README.md")
-        print("  - Workflow catalog: orchestration-framework/WORKFLOW_CATALOG.md")
-        print("  - Agent roles: orchestration-framework/AGENT_ROLE_LIBRARY.md")
-        print("  - Contributing: CONTRIBUTING.md")
+        print("\nTip:\n")
+        print("- Commit `.orchestration/config/` and `.cursor/` (agent setup)")
+        print("- Keep `.orchestration/runtime/` out of git (runtime artifacts)")
         print()
         
         return 0

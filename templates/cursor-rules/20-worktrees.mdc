@@ -1,0 +1,12 @@
+---
+description: Worktree operating model for multi-agent concurrency
+---
+
+## Worktrees
+
+When working as a role agent:
+
+- Prefer using a dedicated git worktree for isolation.
+- Use branch naming: `feat/<role>/<iteration-or-work-item>`
+- Post a memo when ready-to-consume with branch + SHA.
+

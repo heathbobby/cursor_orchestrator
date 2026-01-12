@@ -115,6 +115,8 @@ class CommandValidator:
         'monitor_progress',
         'launch_agents',
         'apply_ready_to',
+        'ingest_project',
+        'derive_roles',
     }
     
     # Known integrator commands
@@ -177,6 +179,12 @@ class CommandValidator:
         
         if cmd.command == 'apply_ready_to' and len(cmd.args) not in (1, 2):
             return False, f"apply_ready_to requires 1-2 args (target_branch[, dry-run]), got {len(cmd.args)}"
+
+        if cmd.command == 'ingest_project' and len(cmd.args) > 2:
+            return False, f"ingest_project accepts 0-2 args ([path][, dry-run]), got {len(cmd.args)}"
+
+        if cmd.command == 'derive_roles' and len(cmd.args) > 2:
+            return False, f"derive_roles accepts 0-2 args ([path][, dry-run]), got {len(cmd.args)}"
 
         return True, None
     
@@ -275,11 +283,11 @@ if __name__ == "__main__":
         
         parsed = parser.parse(test_cmd)
         if parsed:
-            print(f"  ✓ Parsed: {parsed}")
+            print(f"  OK Parsed: {parsed}")
             valid, error = validator.validate(parsed)
             if valid:
-                print(f"  ✓ Valid")
+                print(f"  OK Valid")
             else:
-                print(f"  ✗ Invalid: {error}")
+                print(f"  ERR Invalid: {error}")
         else:
-            print(f"  ✗ Parse failed")
+            print(f"  ERR Parse failed")

@@ -1,0 +1,38 @@
+---
+description: Orchestration framework operating model (worktrees + memos + CLI)
+---
+
+## Orchestration framework (required)
+
+This project uses the **Generic Orchestration Framework**.
+
+### Runtime directories (encapsulated)
+
+- `.orchestration/runtime/agent-sync/`: memos + task cards (runtime artifact)
+- `.orchestration/runtime/iterations/`: iteration artifacts + agent CLI logs (runtime artifact)
+- `.orchestration/config/`: orchestration configuration (commit-able)
+
+### Command shorthand
+
+You must understand and follow the command shorthand protocol documented in:
+
+- `.orchestration/runtime/agent-sync/COMMAND_SHORTHAND.md`
+
+### Coordination (memos)
+
+Use structured memos in `.orchestration/runtime/agent-sync/` with statuses:
+
+- `draft` | `ready-to-consume` | `ready-to-merge` | `blocked`
+
+### Multi-agent concurrency
+
+When multiple agents work concurrently:
+
+- Each agent should work in an isolated git branch/worktree.
+- Handoffs happen through memos (ready-to-consume) and integrator convergence.
+
+### Cursor CLI (agent)
+
+Cursor CLI is available via `agent` (see docs: `https://cursor.com/docs/cli/overview`).
+The orchestrator may invoke `agent` to run tasks automatically.
+

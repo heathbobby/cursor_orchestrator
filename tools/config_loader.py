@@ -63,6 +63,8 @@ def find_config_path(repo_root: Path) -> Path | None:
     2) <repo_root>/config.yaml                          (standalone repo)
     """
     candidates = [
+        repo_root / ".orchestration" / "config" / "framework.yaml",
+        repo_root / ".orchestration" / "config" / "config.yaml",
         repo_root / "orchestration-framework" / "config.yaml",
         repo_root / "config.yaml",
     ]

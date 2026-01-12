@@ -82,16 +82,9 @@ This will:
 - Run merge gate checks (validation, tests, coverage)
 - Update memos to ready-to-merge
 
-## Framework Documentation
-
-- **Getting Started**: `orchestration-framework/README.md`
-- **Command Reference**: `.orchestration/runtime/agent-sync/COMMAND_SHORTHAND.md`
-- **Workflow Catalog**: `orchestration-framework/WORKFLOW_CATALOG.md`
-- **Agent Roles**: `orchestration-framework/AGENT_ROLE_LIBRARY.md`
-
 ## Configuration
 
-Framework configuration is in: `orchestration-framework/config.yaml`
+Framework configuration is in: `.orchestration/config/framework.yaml`
 
 Customize:
 - Project name and trunk branch
@@ -102,6 +95,5 @@ Customize:
 
 ## Getting Help
 
-- Read the framework docs in `orchestration-framework/`
-- Check examples in `orchestration-framework/examples/`
+- Review command shorthand: `.orchestration/runtime/agent-sync/COMMAND_SHORTHAND.md`
 - Review completed iterations in `.orchestration/runtime/iterations/`

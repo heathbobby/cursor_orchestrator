@@ -869,6 +869,89 @@ def handle_apply_ready_to(cmd: ParsedCommand, ctx: dict) -> CommandResult:
     )
 
 
+@register_handler('orchestrator', 'ingest_project')
+def handle_ingest_project(cmd: ParsedCommand, ctx: dict) -> CommandResult:
+    """
+    Handle /orchestrator::ingest_project([path][, dry-run]).
+
+    Generates:
+      - `.orchestration/config/project_profile.yaml` (commit-able)
+      - `.orchestration/config/PROJECT_CONTEXT.md`  (commit-able)
+    """
+    from pathlib import Path
+
+    try:
+        from .project_ingestion import ingest_project
+    except ImportError:
+        from project_ingestion import ingest_project
+
+    repo_root = Path(ctx.get("repo_root", Path.cwd()))
+    config = ctx.get("config") or {}
+
+    args = cmd.args or []
+    dry_run = "dry-run" in args
+    non_flags = [a for a in args if a != "dry-run"]
+    path = non_flags[0] if non_flags else None
+
+    result = ingest_project(repo_root=repo_root, config=config, path=path, dry_run=dry_run)
+    return CommandResult(
+        success=True,
+        message="Project ingestion complete" + (" (dry-run)" if dry_run else ""),
+        data={
+            "dry_run": dry_run,
+            "scope": result.profile.get("scope"),
+            "profile_path": str(result.profile_path),
+            "context_path": str(result.context_path),
+            "languages": result.profile.get("languages"),
+            "package_managers": result.profile.get("package_managers"),
+        },
+    )
+
+
+@register_handler('orchestrator', 'derive_roles')
+def handle_derive_roles(cmd: ParsedCommand, ctx: dict) -> CommandResult:
+    """
+    Handle /orchestrator::derive_roles([path][, dry-run]).
+
+    Generates:
+      - `.orchestration/config/derived_roles.yaml` (commit-able)
+      - `.cursor/rules/30-derived-roles.mdc` (commit-able, only if cursor.enabled)
+    """
+    from pathlib import Path
+
+    try:
+        from .project_ingestion import ingest_project
+        from .role_deriver import derive_roles_from_profile, write_derived_roles
+    except ImportError:
+        from project_ingestion import ingest_project
+        from role_deriver import derive_roles_from_profile, write_derived_roles
+
+    repo_root = Path(ctx.get("repo_root", Path.cwd()))
+    config = ctx.get("config") or {}
+
+    args = cmd.args or []
+    dry_run = "dry-run" in args
+    non_flags = [a for a in args if a != "dry-run"]
+    path = non_flags[0] if non_flags else None
+
+    # Ensure we have a profile to derive from (write it unless dry-run).
+    ingest_res = ingest_project(repo_root=repo_root, config=config, path=path, dry_run=dry_run)
+    derived = derive_roles_from_profile(ingest_res.profile)
+    write_res = write_derived_roles(repo_root=repo_root, derived=derived, config=config, dry_run=dry_run)
+
+    return CommandResult(
+        success=True,
+        message="Derived recommended roles" + (" (dry-run)" if dry_run else ""),
+        data={
+            "dry_run": dry_run,
+            "profile_path": str(ingest_res.profile_path),
+            "derived_roles_path": str(write_res.derived_path),
+            "cursor_rule_path": str(write_res.cursor_rule_path) if write_res.cursor_rule_path else None,
+            "recommended_roles": [r.get("role") for r in (derived.get("recommended_roles") or [])],
+        },
+    )
+
+
 @register_handler('integrator', 'apply_ready')
 def handle_apply_ready(cmd: ParsedCommand, ctx: dict) -> CommandResult:
     """
