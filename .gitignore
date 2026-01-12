@@ -20,6 +20,9 @@ __pycache__/
 .vscode/
 .idea/
 
+# Secrets
+.env
+
 # Bootstrap testing workspace (commit the scaffold + scripts; ignore generated artifacts inside)
 testing-workspace/**/orchestration-framework/
 testing-workspace/**/.orchestration/

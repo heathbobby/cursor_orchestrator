@@ -16,6 +16,7 @@ from tools.command_parser import parse_command, validate_command
 from tools.command_router import execute_command, get_router
 from tools.repo_utils import find_repo_root
 from tools.config_loader import load_config
+from tools.env_loader import load_dotenv, load_dotenv_searching_parents
 
 
 def _configure_stdout() -> None:
@@ -63,6 +64,11 @@ def cmd_execute(args):
     # Execute command
     print(f"\nExecuting...")
     repo_root = find_repo_root(Path.cwd())
+    # Load `.env` so provider tokens like GITHUB_TOKEN work automatically.
+    # Prefer repo_root/.env; fallback to searching parents (useful in mono-repo/testing layouts).
+    res = load_dotenv(repo_root / ".env", override=False)
+    if not res.loaded:
+        load_dotenv_searching_parents(Path.cwd(), max_depth=8, override=False)
     config = load_config(repo_root)
     trunk_branch = (config.get("project") or {}).get("trunk_branch", "main")
     result = execute_command(
@@ -87,6 +93,10 @@ def cmd_execute(args):
 
 def cmd_list_commands(args):
     """List available commands."""
+    repo_root = find_repo_root(Path.cwd())
+    res = load_dotenv(repo_root / ".env", override=False)
+    if not res.loaded:
+        load_dotenv_searching_parents(Path.cwd(), max_depth=8, override=False)
     router = get_router()
     commands = router.list_commands(args.role)
     
@@ -141,6 +151,9 @@ def cmd_interactive(args):
     print()
 
     repo_root = find_repo_root(Path.cwd())
+    res = load_dotenv(repo_root / ".env", override=False)
+    if not res.loaded:
+        load_dotenv_searching_parents(Path.cwd(), max_depth=8, override=False)
     config = load_config(repo_root)
     trunk_branch = (config.get("project") or {}).get("trunk_branch", "main")
     

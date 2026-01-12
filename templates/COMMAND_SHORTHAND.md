@@ -107,6 +107,7 @@ If `source` is omitted, the framework will use `updates.source` from `.orchestra
 
 **Auth**:
 - Set `GITHUB_TOKEN` (or configure `providers.github.token_env_var`) to increase API rate limits.
+- You can put `GITHUB_TOKEN=...` in a project-root `.env` file; the framework CLI will load it automatically.
 
 ---
 
