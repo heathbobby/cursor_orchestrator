@@ -1,0 +1,50 @@
+# Example Workflow: Task Execution
+# This workflow demonstrates basic task execution with multiple agents.
+
+name: example-workflow
+description: Example workflow showing multi-agent task execution
+
+phases:
+  - id: phase-1
+    name: Execution
+    description: Execute tasks with specialized agents
+
+    iterations:
+      - id: iteration-1
+        name: Task Execution
+        description: Agents execute assigned tasks
+
+        goal: |
+          Execute tasks using specialized agents, each working in isolated
+          worktrees to prevent conflicts.
+
+        agents:
+          - role: backend_developer
+            inputs:
+              - "work_items/task-001.md"
+            deliverables:
+              - path: "outputs/task-001-implementation.md"
+                description: "Implementation details"
+            token_budget: 15000
+
+          - role: qa_engineer
+            inputs:
+              - "work_items/task-001.md"
+            deliverables:
+              - path: "outputs/task-001-tests.md"
+                description: "Test specifications"
+            token_budget: 10000
+
+          - role: tech_writer
+            inputs:
+              - "work_items/task-001.md"
+            deliverables:
+              - path: "outputs/task-001-documentation.md"
+                description: "User documentation"
+            token_budget: 8000
+
+        completion_criteria:
+          requirements:
+            - "Deliverables exist for task-001"
+            - "Each deliverable has non-trivial content"
+

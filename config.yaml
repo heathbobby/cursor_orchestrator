@@ -1,0 +1,33 @@
+# Standalone repository configuration (copy and customize for your projects).
+
+project:
+  name: "orchestration-framework"
+  trunk_branch: "main"
+
+coordination:
+  agent_sync_dir: ".orchestration/runtime/agent-sync"
+
+orchestration:
+  workflows_dir: ".orchestration/config/workflows"
+  iterations_dir: ".orchestration/runtime/iterations"
+  work_items_dir: "work_items"
+  allow_auto_apply_ready: true
+
+commands:
+  task_cards_dir: ".orchestration/runtime/agent-sync/tasks"
+
+cursor:
+  # This enables the "Cursor-orchestrates-Cursor" loop:
+  # an orchestrator agent can run CLI commands that open worktrees/iterations in Cursor.
+  enabled: true
+  auto_open_worktrees: true
+  cli_command: "cursor"
+  open_args: []
+  # Cursor CLI "agent" command (installed in WSL Ubuntu in your setup).
+  # Docs: https://cursor.com/docs/cli/overview
+  agent_command: "agent"
+  # On Windows, run the WSL Ubuntu-installed CLI via a runner prefix:
+  agent_runner_prefix: ["wsl", "-d", "Ubuntu", "--"]
+  agent_output_format: "text"
+  agent_max_parallel: 3
+

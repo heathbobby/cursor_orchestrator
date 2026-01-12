@@ -1,0 +1,29 @@
+# Runtime artifacts (should not pollute host projects)
+.orchestration/runtime/
+
+# Legacy locations (in case a project used older defaults)
+agent-sync/
+iterations/
+
+# Worktrees (multi-agent concurrency)
+.worktrees/
+_wt/
+*.worktrees/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Bootstrap testing workspace (commit the scaffold + scripts; ignore generated artifacts inside)
+testing-workspace/**/orchestration-framework/
+testing-workspace/**/.orchestration/
+testing-workspace/**/.git/
+testing-workspace/**/node_modules/
+testing-workspace/**/__pycache__/
+

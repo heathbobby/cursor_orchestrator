@@ -1,0 +1,140 @@
+# Generic Orchestration Framework Configuration
+
+# Project Information
+project:
+  name: "YourProjectName"  # Change this to your project name
+  trunk_branch: "main"      # Main development branch (main/master/develop)
+  description: "Multi-agent orchestration for [describe your project]"
+
+# Coordination & Communication
+coordination:
+  # Runtime artifacts (memos, task cards) live under a hidden runtime folder
+  # so they don't pollute the host project.
+  agent_sync_dir: ".orchestration/runtime/agent-sync"  # Directory for coordination memos
+  memo_format: "YYYY-MM-DD_{role}_{topic}.md"
+  status_values:
+    - draft              # Work in progress, not ready
+    - ready-to-consume   # Safe for others to use as dependency
+    - ready-to-merge     # Passed all gates, ready for trunk
+    - blocked            # Waiting on dependency or input
+
+# Git Worktrees (Concurrent Agent Development)
+worktrees:
+  enabled: true  # Set to false to disable worktree-based concurrency
+  location: "../{project}.worktrees"  # Where to create worktrees
+  cleanup_on_merge: true  # Auto-remove worktrees after merging
+  branch_prefix: "feat"   # Default branch prefix (feat/fix/chore/docs)
+
+# Orchestration Settings
+orchestration:
+  # Workflow configs are project config; keep them encapsulated but commit-able.
+  workflows_dir: ".orchestration/config/workflows"        # Where workflow YAML configs live
+  # Iterations are runtime artifacts; keep them encapsulated and typically gitignored.
+  iterations_dir: ".orchestration/runtime/iterations"      # Where iteration outputs go
+  work_items_dir: "work_items"      # Where work items (user stories, tasks) live
+  framework_dir: "orchestration-framework"  # Framework installation directory
+  allow_auto_apply_ready: false  # Allow orchestrator to run /integrator::apply_ready after launching agents
+
+# Integration & Convergence
+integration:
+  target_branch_pattern: "integration/{date}"  # Pattern for integration branches
+  merge_gates:
+    - validate_deliverables  # Check all files exist and meet criteria
+    - check_token_budget     # Verify agents stayed within budget
+    - check_test_coverage    # Verify test coverage (if applicable)
+    - validate_no_conflicts  # Ensure clean merge
+  auto_merge_to_trunk: false  # Require manual approval before merging to trunk
+  continue_on_conflict: false  # Stop if conflicts detected
+
+# Token Budget Management
+token_budget:
+  default_per_agent: 20000  # Default token budget per agent
+  risk_thresholds:
+    low: 70      # <70% utilization = LOW risk
+    medium: 85   # 70-85% utilization = MEDIUM risk
+    high: 100    # 85-100% utilization = HIGH risk
+  warn_at_percentage: 80  # Warn when agent reaches this percentage
+  split_work_threshold: 90  # Suggest work splitting above this percentage
+
+# Cursor IDE Integration
+cursor:
+  enabled: true  # Enable Cursor-specific features
+  rules_dir: ".cursor/rules"  # Where to install Cursor rules
+  auto_open_worktrees: true  # Auto-open worktrees in Cursor
+  boot_prompts_in_worktree: true  # Copy boot prompts to worktrees
+  # Cursor CLI (terminal agent) command. Docs: https://cursor.com/docs/cli/overview
+  agent_command: "agent"
+  # If Cursor CLI is installed in WSL, use a runner prefix (Windows example):
+  # agent_runner_prefix: ["wsl", "-d", "Ubuntu", "--"]
+  agent_output_format: "text"
+  agent_max_parallel: 1
+
+# Validation Settings
+validation:
+  file_existence: true  # Check files exist
+  file_size_min: 100    # Minimum file size in bytes (catches empty/stub files)
+  completion_criteria: true  # Check against COMPLETION_CRITERIA.md
+  content_checks: true  # Run content validation (if specified in criteria)
+
+# Agent Roles (Customize for your project)
+roles:
+  # Development
+  - backend_developer
+  - frontend_developer
+  - mobile_developer
+  - devops_engineer
+  
+  # Quality
+  - qa_engineer
+  - qa_lead
+  - test_automation_engineer
+  - performance_engineer
+  
+  # Product & Design
+  - product_analyst
+  - ux_designer
+  - ui_designer
+  
+  # Operations
+  - sre
+  - security_engineer
+  - data_engineer
+  
+  # Documentation
+  - tech_writer
+  - api_documenter
+
+# Monitoring & Metrics
+monitoring:
+  enabled: true
+  check_interval_seconds: 30  # How often to check agent progress
+  log_level: "INFO"  # DEBUG, INFO, WARN, ERROR
+  metrics_output: "iterations/{iteration}/metrics.json"
+
+# Feedback & Learning
+feedback:
+  collect_after_iteration: true  # Collect feedback after each iteration
+  feedback_dir: "iterations/{iteration}/feedback"
+  learnings_dir: "iterations/{iteration}/learnings"
+  auto_apply_learnings: false  # Require manual review before applying
+
+# Command Shorthand
+commands:
+  enabled: true  # Enable slash command support
+  task_cards_dir: ".orchestration/runtime/agent-sync/tasks"  # Where to generate task cards
+  generate_index: true  # Generate INDEX.md for task discovery
+
+# CI/CD Integration (Future)
+cicd:
+  enabled: false
+  trigger_on_ready_to_merge: false
+  validation_pipeline: ".github/workflows/validate.yml"
+  integration_pipeline: ".github/workflows/integrate.yml"
+
+# Customization
+custom:
+  # Add your project-specific configuration here
+  # Example:
+  # jira_project_key: "PROJ"
+  # slack_webhook_url: "https://hooks.slack.com/..."
+  # notification_email: "team@example.com"

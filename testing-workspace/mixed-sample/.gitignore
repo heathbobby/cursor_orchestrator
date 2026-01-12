@@ -1,0 +1,26 @@
+
+# Generic Orchestration Framework
+# Orchestration runtime artifacts
+.orchestration/runtime/
+# Git worktrees (multi-agent orchestration)
+# Worktrees should be outside repo (../mixed-sample.worktrees), but ignore if created inside
+.worktrees/
+_wt/
+mixed-sample.worktrees/
+
+# Agent outputs and logs (optional - may want to commit some)
+.orchestration/runtime/iterations/*/outputs/agent_*.log
+.orchestration/runtime/iterations/*/outputs/agent_pids.txt
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
