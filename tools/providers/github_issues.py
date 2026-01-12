@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from pathlib import PurePosixPath
 import urllib.parse
 import urllib.request
 import urllib.error
@@ -11,6 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+TEMPLATE_VERSION = "3"
 
 @dataclass(frozen=True)
 class SyncResult:
@@ -94,12 +96,14 @@ def _render_work_item(issue: dict[str, Any], repo: str) -> str:
         if isinstance(a, dict) and a.get("login"):
             assignee_logins.append(str(a["login"]))
     body = issue.get("body") or ""
+    synced_at = datetime.utcnow().isoformat() + "Z"
 
     lines = []
     lines.append(f"# GH-{number}: {title}\n")
     lines.append(f"- **Source**: GitHub Issues")
     lines.append(f"- **Repo**: `{repo}`")
     lines.append(f"- **Issue**: `{number}`")
+    lines.append(f"- **Work Item ID**: `GH-{number}`")
     lines.append(f"- **State**: `{state}`")
     if label_names:
         lines.append(f"- **Labels**: {', '.join(f'`{n}`' for n in sorted(label_names))}")
@@ -109,21 +113,127 @@ def _render_work_item(issue: dict[str, Any], repo: str) -> str:
         lines.append(f"- **Created**: `{created_at}`")
     if updated_at:
         lines.append(f"- **Updated**: `{updated_at}`")
+    lines.append(f"- **Synced At**: `{synced_at}`")
+    lines.append(f"- **Template Version**: `{TEMPLATE_VERSION}`")
     if html_url:
         lines.append(f"- **URL**: `{html_url}`")
     lines.append("")
     lines.append("## Objective\n")
     lines.append("Implement this work item according to the project’s conventions.\n")
+    lines.append("## Project Agent Guidance (detected)\n")
+    lines.append("- (This section is auto-filled when `AGENTS.md` / context docs exist in the repo.)\n")
     lines.append("## Source Issue Body\n")
     lines.append(body if body.strip() else "_(no description provided)_")
     lines.append("")
     lines.append("## Deliverables\n")
     lines.append("- (Fill in expected deliverables for this issue)")
     lines.append("")
+    lines.append("## Suggested Commands (from ingestion)\n")
+    lines.append("- (This section is auto-filled when `.orchestration/config/project_profile.yaml` exists.)\n")
     lines.append("## Notes for Agents\n")
     lines.append("- If the issue is ambiguous, ask clarifying questions in an `agent-sync` memo.")
     lines.append("- When complete, commit work on your branch/worktree and post a `ready-to-consume` memo with Branch+SHA.")
     return "\n".join(lines) + "\n"
+
+
+def _load_project_profile(repo_root: Path) -> dict[str, Any]:
+    profile_path = repo_root / ".orchestration" / "config" / "project_profile.yaml"
+    if not profile_path.exists():
+        return {}
+    try:
+        import yaml  # type: ignore
+    except Exception:
+        return {}
+    try:
+        data = yaml.safe_load(profile_path.read_text(encoding="utf-8", errors="replace")) or {}
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _discover_guidance_paths(repo_root: Path) -> list[str]:
+    """
+    Return repo-relative paths to key agent guidance documents, if present.
+    """
+    candidates = [
+        "AGENTS.md",
+        "AGENT.md",
+        "CONTRIBUTING.md",
+        ".orchestration/config/PROJECT_CONTEXT.md",
+        ".orchestration/runtime/agent-sync/COMMAND_SHORTHAND.md",
+        ".orchestration/runtime/agent-sync/COMMUNICATION_CONVENTIONS.md",
+        ".cursor/agent.md",
+    ]
+    found: list[str] = []
+    for rel in candidates:
+        if (repo_root / rel).exists():
+            found.append(rel)
+
+    # Also add a nested AGENTS.md if it exists (common for monorepos).
+    nested = repo_root / "saasgen-consolidated" / "AGENTS.md"
+    if nested.exists():
+        found.append("saasgen-consolidated/AGENTS.md")
+
+    # Dedup preserve order
+    seen: set[str] = set()
+    out: list[str] = []
+    for p in found:
+        p2 = str(PurePosixPath(p))
+        if p2 in seen:
+            continue
+        seen.add(p2)
+        out.append(p2)
+    return out
+
+
+def _fill_template_sections(repo_root: Path, content: str) -> str:
+    """
+    Replace placeholder sections with repo-specific hints (best-effort).
+    """
+    profile = _load_project_profile(repo_root)
+    guidance = _discover_guidance_paths(repo_root)
+
+    # Compute "project root" hint based on detected package.json location, if nested.
+    signals = profile.get("signals_present") if isinstance(profile.get("signals_present"), dict) else {}
+    pkg = signals.get("package_json") if isinstance(signals, dict) else None
+    root_hint = None
+    if isinstance(pkg, str) and pkg:
+        p = PurePosixPath(pkg.replace("\\", "/"))
+        if p.name == "package.json" and len(p.parts) > 1:
+            root_hint = str(p.parent)
+
+    # Suggested commands
+    cmds = profile.get("suggested_commands") if isinstance(profile.get("suggested_commands"), dict) else {}
+    cmd_lines: list[str] = []
+    if root_hint:
+        cmd_lines.append(f"- **Working directory**: `cd {root_hint}`")
+    if isinstance(cmds, dict) and cmds:
+        cmd_lines.append("- **Common commands**:")
+        for k, v in sorted(cmds.items()):
+            cmd_lines.append(f"  - **{k}**: `{v}`")
+    if not cmd_lines:
+        cmd_lines.append("- (No suggested commands available yet. Run `/orchestrator::ingest_project`.)")
+
+    # Guidance section
+    guide_lines: list[str] = []
+    if guidance:
+        guide_lines.append("- **Read first**:")
+        for p in guidance:
+            guide_lines.append(f"  - `{p}`")
+    else:
+        guide_lines.append("- (No guidance files detected. Add `AGENTS.md` or `.cursor/agent.md`.)")
+
+    content = content.replace(
+        "## Project Agent Guidance (detected)\n\n- (This section is auto-filled when `AGENTS.md` / context docs exist in the repo.)\n",
+        "## Project Agent Guidance (detected)\n\n" + "\n".join(guide_lines) + "\n",
+    )
+
+    content = content.replace(
+        "## Suggested Commands (from ingestion)\n\n- (This section is auto-filled when `.orchestration/config/project_profile.yaml` exists.)\n",
+        "## Suggested Commands (from ingestion)\n\n" + "\n".join(cmd_lines) + "\n",
+    )
+
+    return content
 
 
 def sync_github_issues(
@@ -215,7 +325,7 @@ def sync_github_issues(
         fname = f"GH-{number}-{slug}.md" if number else f"GH-unknown-{slug}.md"
         path = dest_dir / fname
 
-        content = _render_work_item(issue, repo)
+        content = _fill_template_sections(repo_root, _render_work_item(issue, repo))
 
         existing = _read_text(path)
         if existing is None:
@@ -224,7 +334,7 @@ def sync_github_issues(
             continue
 
         # Fast skip if already has this updated_at marker.
-        if updated_at and (f"- **Updated**: `{updated_at}`" in existing):
+        if updated_at and (f"- **Updated**: `{updated_at}`" in existing) and (f"- **Template Version**: `{TEMPLATE_VERSION}`" in existing):
             skipped += 1
             continue
 
