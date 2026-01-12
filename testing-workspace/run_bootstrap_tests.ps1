@@ -63,6 +63,10 @@ foreach ($p in $projects) {
   # Run bootstrap
   Push-Location $projRoot
   try {
+    # Ensure pattern listing works (should not modify project)
+    python .\orchestration-framework\bootstrap.py --list-patterns | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "bootstrap.py --list-patterns failed for $p" }
+
     $noCursor = $true
     if ($p -eq "python-sample") { $noCursor = $false }  # exercise cursor rules generation in one project
     if ($noCursor) {

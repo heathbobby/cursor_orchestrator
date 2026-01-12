@@ -25,6 +25,62 @@ from pathlib import Path
 from typing import Optional
 
 
+def _patterns_dir(framework_dir: Path) -> Path:
+    return framework_dir / "templates" / "patterns"
+
+
+def list_patterns(framework_dir: Path) -> list[str]:
+    """List available generic pattern packs shipped with the framework."""
+    base = _patterns_dir(framework_dir)
+    if not base.exists():
+        return []
+    out: list[str] = []
+    for p in sorted(base.iterdir()):
+        if p.is_dir() and not p.name.startswith("_"):
+            out.append(p.name)
+    return out
+
+
+def apply_pattern(repo_root: Path, framework_dir: Path, config: dict, pattern: str) -> None:
+    """
+    Apply a generic pattern pack into the target project.
+
+    Currently seeds workflow YAMLs into `.orchestration/config/workflows/`.
+    """
+    patterns_base = _patterns_dir(framework_dir)
+    pattern_dir = patterns_base / pattern
+    if not pattern_dir.exists():
+        raise RuntimeError(f"Pattern not found: {pattern} (expected at {pattern_dir})")
+
+    workflows_src = pattern_dir / "workflows"
+    workflows_dst = repo_root / config["orchestration"]["workflows_dir"]
+    workflows_dst.mkdir(parents=True, exist_ok=True)
+
+    copied = 0
+    if workflows_src.exists():
+        for wf in sorted(workflows_src.glob("*.y*ml")):
+            dest = workflows_dst / wf.name
+            if dest.exists():
+                print_info(f"Workflow already exists (skipping): {dest.relative_to(repo_root)}")
+                continue
+            shutil.copy(wf, dest)
+            copied += 1
+            print_success(f"Applied workflow: {dest.relative_to(repo_root)}")
+
+    # Record applied pattern (commit-able config marker)
+    marker = repo_root / ".orchestration" / "config" / "pattern.yaml"
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker_content = f"""# Applied orchestration pattern (generic)
+pattern: "{pattern}"
+applied_at: "{date.today().isoformat()}"
+"""
+    if not marker.exists():
+        marker.write_text(marker_content, encoding="utf-8")
+        print_success(f"Recorded pattern: {marker.relative_to(repo_root)}")
+    else:
+        print_info("pattern.yaml already exists (skipping)")
+
+
 def _configure_stdout() -> None:
     """
     Make CLI output robust on Windows consoles with limited default encodings.
@@ -539,6 +595,18 @@ Examples:
         action="store_true",
         help="Initialize framework in current directory"
     )
+
+    parser.add_argument(
+        "--list-patterns",
+        action="store_true",
+        help="List available generic project patterns (does not modify the project)"
+    )
+
+    parser.add_argument(
+        "--pattern",
+        default=None,
+        help="Apply a generic project pattern pack (seeds workflows into .orchestration/config/workflows)"
+    )
     
     parser.add_argument(
         "--project-name",
@@ -565,11 +633,7 @@ Examples:
     )
     
     args = parser.parse_args()
-    
-    if not args.init:
-        parser.print_help()
-        return 1
-    
+
     repo_root = Path.cwd()
     framework_dir = repo_root / "orchestration-framework"
     
@@ -577,6 +641,21 @@ Examples:
         print_error(f"Framework directory not found: {framework_dir}")
         print_info("Please copy the orchestration-framework/ directory to your project first")
         print_info("Or run this script from a directory containing orchestration-framework/")
+        return 1
+
+    # List patterns mode (no init required)
+    if args.list_patterns:
+        pats = list_patterns(framework_dir)
+        print_header("Available Project Patterns")
+        if not pats:
+            print("No patterns found.")
+        else:
+            for p in pats:
+                print(f"- {p}")
+        return 0
+
+    if not args.init:
+        parser.print_help()
         return 1
     
     # Determine project name
@@ -630,6 +709,11 @@ Examples:
         
         copy_templates(repo_root, framework_dir, config)
         print()
+
+        if args.pattern:
+            print_info(f"Applying pattern: {args.pattern}")
+            apply_pattern(repo_root, framework_dir, config, args.pattern)
+            print()
         
         setup_cursor_rules(repo_root, framework_dir, config)
         print()

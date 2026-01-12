@@ -1,0 +1,74 @@
+# Generic Pattern: Node Monorepo SaaS
+#
+# This is a starter workflow intended for Node.js monorepos with:
+# - API service
+# - Admin/web app
+# - CI + Docker (optional)
+#
+# Customize `inputs` to match your repo's actual work items (e.g. files under `work_items/`).
+
+name: node-monorepo-saas
+description: Generic starter workflow for a Node monorepo SaaS platform
+
+phases:
+  - id: sprint-0
+    name: Sprint 0 - Baseline
+    description: Establish baseline dev loop, CI, and documentation
+
+    iterations:
+      - id: iteration-0
+        name: Repo Baseline
+        description: Prepare repo for a multi-agent implementation sprint
+
+        goal: |
+          Establish a working baseline: local dev, lint/test, and minimal docs.
+          Split responsibilities across roles so work can proceed in parallel.
+
+        agents:
+          - role: backend_developer
+            inputs:
+              - "WI-API-BASELINE"
+            deliverables:
+              - path: "documentation/api-baseline.md"
+                description: "API baseline design + dev loop"
+            token_budget: 20000
+
+          - role: frontend_developer
+            inputs:
+              - "WI-ADMIN-BASELINE"
+            deliverables:
+              - path: "documentation/admin-baseline.md"
+                description: "Admin/app baseline + dev loop"
+            token_budget: 20000
+
+          - role: sre
+            inputs:
+              - "WI-CI-BASELINE"
+            deliverables:
+              - path: "documentation/ci-baseline.md"
+                description: "CI pipeline baseline + Docker notes"
+            token_budget: 15000
+
+          - role: qa_engineer
+            inputs:
+              - "WI-TEST-BASELINE"
+            deliverables:
+              - path: "documentation/test-baseline.md"
+                description: "Test strategy baseline + smoke tests"
+            token_budget: 12000
+
+          - role: tech_writer
+            inputs:
+              - "WI-DOCS-BASELINE"
+            deliverables:
+              - path: "documentation/quickstart.md"
+                description: "Developer quickstart guide"
+            token_budget: 10000
+
+        completion_criteria:
+          files:
+            - "documentation/api-baseline.md"
+            - "documentation/admin-baseline.md"
+            - "documentation/ci-baseline.md"
+            - "documentation/test-baseline.md"
+            - "documentation/quickstart.md"
