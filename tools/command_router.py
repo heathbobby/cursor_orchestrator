@@ -1025,6 +1025,71 @@ def handle_archive_tasks(cmd: ParsedCommand, ctx: dict) -> CommandResult:
     )
 
 
+@register_handler('orchestrator', 'update_knowledge')
+def handle_update_knowledge(cmd: ParsedCommand, ctx: dict) -> CommandResult:
+    """
+    Handle /orchestrator::update_knowledge([iteration][, dry-run]).
+
+    Generates/refreshes `.orchestration/knowledge/` (commit-able).
+    """
+    from pathlib import Path
+    try:
+        from .knowledge_manager import update_knowledge_base
+    except ImportError:
+        from knowledge_manager import update_knowledge_base
+
+    repo_root = Path(ctx.get("repo_root", Path.cwd()))
+    config = ctx.get("config") or {}
+    args = cmd.args or []
+    dry_run = "dry-run" in args
+    non_flags = [a for a in args if a != "dry-run"]
+    iteration = non_flags[0] if non_flags else None
+
+    res = update_knowledge_base(repo_root=repo_root, config=config, iteration=iteration, dry_run=dry_run)
+    return CommandResult(
+        success=res.success,
+        message=res.message,
+        data={
+            "dry_run": dry_run,
+            "iteration": iteration,
+            "knowledge_dir": str(res.knowledge_dir),
+            "written": res.written,
+        },
+    )
+
+
+@register_handler('orchestrator', 'render_status')
+def handle_render_status(cmd: ParsedCommand, ctx: dict) -> CommandResult:
+    """
+    Handle /orchestrator::render_status([iteration][, dry-run]).
+    Generates `.orchestration/runtime/status/STATUS.md` and `.html`.
+    """
+    from pathlib import Path
+    try:
+        from .status_renderer import render_status
+    except ImportError:
+        from status_renderer import render_status
+
+    repo_root = Path(ctx.get("repo_root", Path.cwd()))
+    config = ctx.get("config") or {}
+    args = cmd.args or []
+    dry_run = "dry-run" in args
+    non_flags = [a for a in args if a != "dry-run"]
+    iteration = non_flags[0] if non_flags else None
+
+    res = render_status(repo_root=repo_root, config=config, iteration=iteration, dry_run=dry_run)
+    return CommandResult(
+        success=res.success,
+        message=res.message,
+        data={
+            "dry_run": dry_run,
+            "iteration": iteration,
+            "markdown_path": str(res.markdown_path),
+            "html_path": str(res.html_path),
+        },
+    )
+
+
 @register_handler('integrator', 'apply_ready')
 def handle_apply_ready(cmd: ParsedCommand, ctx: dict) -> CommandResult:
     """
@@ -1118,6 +1183,37 @@ def handle_validate_iteration(cmd: ParsedCommand, ctx: dict) -> CommandResult:
             'files_checked': 0,
             'criteria_met': True
         }
+    )
+
+
+@register_handler('integrator', 'evaluate_iteration')
+def handle_evaluate_iteration(cmd: ParsedCommand, ctx: dict) -> CommandResult:
+    """
+    Handle /integrator::evaluate_iteration(iteration[, dry-run]).
+
+    Produces a prompt/rules effectiveness report under `.orchestration/knowledge/evaluations/`.
+    """
+    from pathlib import Path
+    try:
+        from .iteration_evaluator import evaluate_iteration
+    except ImportError:
+        from iteration_evaluator import evaluate_iteration
+
+    iteration = cmd.args[0]
+    dry_run = len(cmd.args) == 2 and cmd.args[1] == "dry-run"
+
+    repo_root = Path(ctx.get("repo_root", Path.cwd()))
+    config = ctx.get("config") or {}
+    res = evaluate_iteration(repo_root=repo_root, config=config, iteration=iteration, dry_run=dry_run)
+    return CommandResult(
+        success=res.success,
+        message=res.message,
+        data={
+            "dry_run": dry_run,
+            "iteration": iteration,
+            "output_path": str(res.output_path),
+            "suggestions": res.suggestions,
+        },
     )
 
 

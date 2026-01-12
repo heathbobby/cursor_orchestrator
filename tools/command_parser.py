@@ -118,6 +118,8 @@ class CommandValidator:
         'ingest_project',
         'derive_roles',
         'archive_tasks',
+        'update_knowledge',
+        'render_status',
     }
     
     # Known integrator commands
@@ -125,6 +127,7 @@ class CommandValidator:
         'apply_ready',
         'validate_iteration',
         'distribute_tasks',
+        'evaluate_iteration',
     }
     
     # Known role commands (generic, applicable to any role)
@@ -190,6 +193,12 @@ class CommandValidator:
         if cmd.command == 'archive_tasks' and len(cmd.args) not in (1, 2):
             return False, f"archive_tasks requires 1-2 args (iteration[, dry-run]), got {len(cmd.args)}"
 
+        if cmd.command == 'update_knowledge' and len(cmd.args) > 2:
+            return False, f"update_knowledge accepts 0-2 args ([iteration][, dry-run]), got {len(cmd.args)}"
+
+        if cmd.command == 'render_status' and len(cmd.args) > 2:
+            return False, f"render_status accepts 0-2 args ([iteration][, dry-run]), got {len(cmd.args)}"
+
         return True, None
     
     def _validate_integrator(self, cmd: ParsedCommand) -> tuple[bool, Optional[str]]:
@@ -206,6 +215,9 @@ class CommandValidator:
         
         if cmd.command == 'distribute_tasks' and len(cmd.args) != 1:
             return False, f"distribute_tasks requires 1 arg (iteration), got {len(cmd.args)}"
+
+        if cmd.command == 'evaluate_iteration' and len(cmd.args) not in (1, 2):
+            return False, f"evaluate_iteration requires 1-2 args (iteration[, dry-run]), got {len(cmd.args)}"
         
         # Light semantic validation for apply_ready args.
         if cmd.command == 'apply_ready' and cmd.args:

@@ -66,6 +66,26 @@ Commands are written like:
 
 ---
 
+#### `/orchestrator::update_knowledge([iteration][, dry-run])`
+
+**Intent**: Build and continuously refine a project knowledgebase from runtime artifacts
+
+**Expected Output**:
+- `.orchestration/knowledge/README.md`
+- `.orchestration/knowledge/memos_summary.md`
+- `.orchestration/knowledge/iterations/<iteration>.md` (one per iteration)
+
+---
+
+#### `/orchestrator::render_status([iteration][, dry-run])`
+
+**Intent**: Render a quick status view (Markdown + HTML)
+
+**Expected Output**:
+- `.orchestration/runtime/status/STATUS.md` and `STATUS.html`
+
+---
+
 #### `/orchestrator::start_workflow(<workflow>, <phase>, <iteration>)`
 
 **Intent**: Start complete workflow with all agents in isolated worktrees
@@ -180,6 +200,15 @@ python orchestration-framework/cli.py integrate apply-ready \
 python orchestration-framework/tools/validate_iteration.sh \
   iterations/<iteration>/
 ```
+
+---
+
+#### `/integrator::evaluate_iteration(<iteration>[, dry-run])`
+
+**Intent**: Evaluate iteration artifacts and produce prompt/rules improvement suggestions
+
+**Expected Output**:
+- `.orchestration/knowledge/evaluations/<iteration>_<timestamp>.md`
 
 ---
 

@@ -30,6 +30,14 @@ def default_config() -> dict[str, Any]:
             "task_cards_dir": ".orchestration/runtime/agent-sync/tasks",
             "task_archive_dir": ".orchestration/runtime/agent-sync/tasks/_archive",
         },
+        "knowledge": {
+            "knowledge_dir": ".orchestration/knowledge",
+            "evaluations_dir": ".orchestration/knowledge/evaluations",
+            "iterations_dir": ".orchestration/knowledge/iterations",
+        },
+        "status": {
+            "status_dir": ".orchestration/runtime/status",
+        },
         "cursor": {
             "enabled": False,
             "auto_open_worktrees": False,

@@ -393,6 +393,14 @@ commands:
   task_cards_dir: ".orchestration/runtime/agent-sync/tasks"
   task_archive_dir: ".orchestration/runtime/agent-sync/tasks/_archive"
 
+knowledge:
+  knowledge_dir: ".orchestration/knowledge"
+  evaluations_dir: ".orchestration/knowledge/evaluations"
+  iterations_dir: ".orchestration/knowledge/iterations"
+
+status:
+  status_dir: ".orchestration/runtime/status"
+
 token_budget:
   default_per_agent: 20000
   risk_thresholds:

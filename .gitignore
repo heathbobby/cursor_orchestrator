@@ -28,3 +28,7 @@ testing-workspace/**/.cursor/
 testing-workspace/**/node_modules/
 testing-workspace/**/__pycache__/
 
+# Optional real-world test project (kept local; used for bootstrap scenario testing)
+testing-workspace/SaaSGen/
+testing-workspace/SaaSGen.bootstrapped/
+

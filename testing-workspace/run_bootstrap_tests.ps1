@@ -127,6 +127,26 @@ foreach ($p in $projects) {
     python .\orchestration-framework\cli.py execute "/integrator::apply_ready(dry-run)" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "apply_ready dry-run failed for $p" }
 
+    # Knowledgebase + prompt refinement + status report (safe generators)
+    if ($p -eq "python-sample") {
+      python .\orchestration-framework\cli.py execute "/orchestrator::update_knowledge" | Out-Null
+      if ($LASTEXITCODE -ne 0) { throw "update_knowledge failed for $p" }
+      Assert-PathExists (Join-Path $projRoot ".orchestration\\knowledge\\README.md") "Missing knowledge README"
+      Assert-PathExists (Join-Path $projRoot ".orchestration\\knowledge\\memos_summary.md") "Missing memos_summary.md"
+
+      python .\orchestration-framework\cli.py execute "/integrator::evaluate_iteration(iteration-1)" | Out-Null
+      if ($LASTEXITCODE -ne 0) { throw "evaluate_iteration failed for $p" }
+      $evalDir = Join-Path $projRoot ".orchestration\\knowledge\\evaluations"
+      Assert-PathExists $evalDir "Missing evaluations dir"
+      $evalAny = Get-ChildItem $evalDir -Filter "iteration-1_*.md" | Select-Object -First 1
+      if (!$evalAny) { throw "No evaluation report created under $evalDir" }
+
+      python .\orchestration-framework\cli.py execute "/orchestrator::render_status" | Out-Null
+      if ($LASTEXITCODE -ne 0) { throw "render_status failed for $p" }
+      Assert-PathExists (Join-Path $projRoot ".orchestration\\runtime\\status\\STATUS.md") "Missing STATUS.md"
+      Assert-PathExists (Join-Path $projRoot ".orchestration\\runtime\\status\\STATUS.html") "Missing STATUS.html"
+    }
+
     # Task hygiene: archive iteration task cards (only for python-sample, where we already enable cursor + extra steps)
     if ($p -eq "python-sample") {
       python .\orchestration-framework\cli.py execute "/orchestrator::archive_tasks(iteration-1)" | Out-Null
