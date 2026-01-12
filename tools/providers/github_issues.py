@@ -5,6 +5,7 @@ import os
 import re
 import urllib.parse
 import urllib.request
+import urllib.error
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -56,9 +57,17 @@ def _github_request(url: str, token: str | None = None) -> dict[str, Any] | list
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(url, headers=headers, method="GET")
-    with urllib.request.urlopen(req, timeout=30) as resp:  # nosec - controlled URL + read-only
-        body = resp.read().decode("utf-8", errors="replace")
-        return json.loads(body)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:  # nosec - controlled URL + read-only
+            body = resp.read().decode("utf-8", errors="replace")
+            return json.loads(body)
+    except urllib.error.HTTPError as e:
+        # Include response body for debugging (GitHub returns JSON with message + status).
+        try:
+            raw = e.read().decode("utf-8", errors="replace")
+        except Exception:
+            raw = ""
+        raise RuntimeError(f"HTTP {getattr(e, 'code', '?')} {getattr(e, 'reason', '')}: {raw}".strip()) from e
 
 
 def _issues_url(api_base: str, repo: str, state: str, per_page: int, page: int) -> str:
@@ -170,7 +179,12 @@ def sync_github_issues(
         try:
             data = _github_request(url, token=token)
         except Exception as e:
-            errors.append(f"fetch failed: {e}")
+            hint = ""
+            msg = str(e)
+            # GitHub uses 404 to hide private repos from unauthenticated callers.
+            if ("HTTP 404" in msg) and (not token):
+                hint = f" (hint: repo may be private; set {token_env_var} with access)"
+            errors.append(f"fetch failed: {e}{hint}")
             break
         if not isinstance(data, list):
             errors.append("unexpected response (not a list)")
