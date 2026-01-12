@@ -401,6 +401,22 @@ knowledge:
 status:
   status_dir: ".orchestration/runtime/status"
 
+updates:
+  # Where to pull framework updates from. Set this in your project if you want automated updates.
+  # source:
+  #   type: "git"
+  #   repo: "https://github.com/<org>/<repo>.git"
+  #   ref: "main"
+  source: null
+  # Minimal payload to keep the target project lean.
+  payload:
+    - "bootstrap.py"
+    - "cli.py"
+    - "requirements.txt"
+    - "config.yaml.example"
+    - "templates"
+    - "tools"
+
 token_budget:
   default_per_agent: 20000
   risk_thresholds:

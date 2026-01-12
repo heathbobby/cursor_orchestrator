@@ -86,6 +86,18 @@ Commands are written like:
 
 ---
 
+#### `/orchestrator::update_framework([source][, dry-run])`
+
+**Intent**: Update the installed `orchestration-framework/` payload in a bootstrapped project
+
+**Examples**:
+- Local source (this repo): `/orchestrator::update_framework(C:/path/to/orchestration-framework-repo, dry-run)`
+- Git source with ref: `/orchestrator::update_framework(https://github.com/org/repo.git@main, dry-run)`
+
+If `source` is omitted, the framework will use `updates.source` from `.orchestration/config/framework.yaml`.
+
+---
+
 #### `/orchestrator::start_workflow(<workflow>, <phase>, <iteration>)`
 
 **Intent**: Start complete workflow with all agents in isolated worktrees

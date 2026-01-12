@@ -86,6 +86,10 @@ try {
   python .\orchestration-framework\cli.py execute "/orchestrator::render_status" | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "render_status failed" }
 
+  # Prove out self-update mechanism (dry-run) using local source path to this repo.
+  python .\orchestration-framework\cli.py execute "/orchestrator::update_framework($repoRoot, dry-run)" | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "update_framework dry-run failed" }
+
   Write-Host "OK SaaSGen scenario completed. Review:"
   Write-Host "  - .orchestration\\config\\project_profile.yaml"
   Write-Host "  - .orchestration\\config\\derived_roles.yaml"

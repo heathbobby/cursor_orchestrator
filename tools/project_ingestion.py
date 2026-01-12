@@ -70,39 +70,91 @@ def build_project_profile(repo_root: Path, scope: Path | None = None) -> dict[st
     scope = (scope or repo_root).resolve()
     root = repo_root.resolve()
 
-    # Signal files (repo root first)
-    signals = {
-        "package_json": root / "package.json",
-        "requirements_txt": root / "requirements.txt",
-        "pyproject_toml": root / "pyproject.toml",
-        "poetry_lock": root / "poetry.lock",
-        "pipfile": root / "Pipfile",
-        "go_mod": root / "go.mod",
-        "cargo_toml": root / "Cargo.toml",
-        "pom_xml": root / "pom.xml",
-        "build_gradle": root / "build.gradle",
-        "makefile": root / "Makefile",
-        "dockerfile": root / "Dockerfile",
-        "compose": root / "docker-compose.yml",
-        "github_workflows": root / ".github" / "workflows",
+    # Signal files (repo root first). If nothing is found at the root, we do a shallow scan
+    # to catch monorepos / nested apps (common in real projects).
+    signal_names = {
+        "package_json": "package.json",
+        "requirements_txt": "requirements.txt",
+        "pyproject_toml": "pyproject.toml",
+        "poetry_lock": "poetry.lock",
+        "pipfile": "Pipfile",
+        "go_mod": "go.mod",
+        "cargo_toml": "Cargo.toml",
+        "pom_xml": "pom.xml",
+        "build_gradle": "build.gradle",
+        "makefile": "Makefile",
+        "dockerfile": "Dockerfile",
+        "compose": "docker-compose.yml",
+        "github_workflows": ".github/workflows",
     }
 
-    present = {k: str(p.relative_to(root)) for k, p in signals.items() if p.exists()}
+    signals = {k: root / v for k, v in signal_names.items()}
+
+    def _shallow_find(name: str, max_depth: int = 3) -> Path | None:
+        """
+        Find a filename or directory name within `scope` up to `max_depth` levels deep.
+        Avoid scanning orchestration artifacts and common vendor dirs.
+        """
+        base = scope
+        ignore_dirs = {".git", "node_modules", "__pycache__", ".orchestration", "orchestration-framework", ".cursor"}
+        try:
+            for dirpath, dirnames, filenames in __import__("os").walk(str(base)):
+                p = Path(dirpath)
+                # depth relative to scope
+                try:
+                    rel = p.relative_to(base)
+                    depth = len(rel.parts)
+                except Exception:
+                    depth = 0
+                if depth > max_depth:
+                    dirnames[:] = []
+                    continue
+                dirnames[:] = [d for d in dirnames if d not in ignore_dirs]
+
+                if "/" in name:
+                    # directory match (e.g. .github/workflows)
+                    target_dir = name.split("/")[0]
+                    if target_dir in dirnames and name == ".github/workflows":
+                        candidate = p / ".github" / "workflows"
+                        if candidate.exists():
+                            return candidate
+                else:
+                    if name in filenames:
+                        return p / name
+        except Exception:
+            return None
+        return None
+
+    present: dict[str, str] = {}
+    for k, p in signals.items():
+        if p.exists():
+            present[k] = str(p.relative_to(root))
+
+    # If repo-root signals are empty, do a bounded scan for nested apps.
+    if not present:
+        for k, name in signal_names.items():
+            found = _shallow_find(name)
+            if found and found.exists():
+                try:
+                    present[k] = str(found.relative_to(root))
+                except Exception:
+                    present[k] = str(found)
 
     languages: list[str] = []
-    if signals["package_json"].exists():
+    if "package_json" in present:
         languages.append("javascript/typescript")
-    if signals["requirements_txt"].exists() or signals["pyproject_toml"].exists() or signals["pipfile"].exists():
+    if any(k in present for k in ("requirements_txt", "pyproject_toml", "pipfile")):
         languages.append("python")
-    if signals["go_mod"].exists():
+    if "go_mod" in present:
         languages.append("go")
-    if signals["cargo_toml"].exists():
+    if "cargo_toml" in present:
         languages.append("rust")
-    if signals["pom_xml"].exists() or signals["build_gradle"].exists():
+    if any(k in present for k in ("pom_xml", "build_gradle")):
         languages.append("java")
 
     package_managers: list[str] = []
-    if signals["package_json"].exists():
+    if "package_json" in present:
+        # lockfiles may be nested too; root check is fine for most cases
         if (root / "pnpm-lock.yaml").exists():
             package_managers.append("pnpm")
         elif (root / "yarn.lock").exists():
@@ -111,25 +163,26 @@ def build_project_profile(repo_root: Path, scope: Path | None = None) -> dict[st
             package_managers.append("npm")
         else:
             package_managers.append("npm (unknown lockfile)")
-    if signals["pyproject_toml"].exists():
-        if signals["poetry_lock"].exists():
+    if "pyproject_toml" in present:
+        if "poetry_lock" in present:
             package_managers.append("poetry")
         else:
             package_managers.append("python (pyproject)")
-    if signals["requirements_txt"].exists():
+    if "requirements_txt" in present:
         package_managers.append("pip")
 
     ci: list[str] = []
-    if signals["github_workflows"].exists() and signals["github_workflows"].is_dir():
+    if "github_workflows" in present and (root / present["github_workflows"]).exists():
         ci.append("github-actions")
 
     containerization: list[str] = []
-    if signals["dockerfile"].exists():
+    if "dockerfile" in present:
         containerization.append("docker")
-    if signals["compose"].exists():
+    if "compose" in present:
         containerization.append("docker-compose")
 
-    node = _detect_from_package_json(signals["package_json"])
+    node_pkg_path = root / present["package_json"] if "package_json" in present else (root / "package.json")
+    node = _detect_from_package_json(node_pkg_path)
 
     suggested_commands: dict[str, str] = {}
     if node.get("present") and isinstance(node.get("scripts"), dict):
@@ -138,7 +191,8 @@ def build_project_profile(repo_root: Path, scope: Path | None = None) -> dict[st
             if k in scripts:
                 suggested_commands[k] = f"npm run {k}"
     # Python heuristics
-    req = _read_text_if_exists(signals["requirements_txt"]) or ""
+    req_path = root / present["requirements_txt"] if "requirements_txt" in present else (root / "requirements.txt")
+    req = _read_text_if_exists(req_path) or ""
     if "pytest" in req.lower():
         suggested_commands.setdefault("test", "pytest")
     if "ruff" in req.lower():

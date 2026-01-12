@@ -120,6 +120,7 @@ class CommandValidator:
         'archive_tasks',
         'update_knowledge',
         'render_status',
+        'update_framework',
     }
     
     # Known integrator commands
@@ -198,6 +199,9 @@ class CommandValidator:
 
         if cmd.command == 'render_status' and len(cmd.args) > 2:
             return False, f"render_status accepts 0-2 args ([iteration][, dry-run]), got {len(cmd.args)}"
+
+        if cmd.command == 'update_framework' and len(cmd.args) > 2:
+            return False, f"update_framework accepts 0-2 args ([source][, dry-run]), got {len(cmd.args)}"
 
         return True, None
     

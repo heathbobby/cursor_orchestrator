@@ -1090,6 +1090,46 @@ def handle_render_status(cmd: ParsedCommand, ctx: dict) -> CommandResult:
     )
 
 
+@register_handler('orchestrator', 'update_framework')
+def handle_update_framework(cmd: ParsedCommand, ctx: dict) -> CommandResult:
+    """
+    Handle /orchestrator::update_framework([source][, dry-run]).
+
+    - If `source` is a local path, it will update from that directory.
+    - If `source` looks like a URL, you can add `@ref` to pick a branch/tag:
+        `https://github.com/org/repo.git@main`
+    - If omitted, uses `updates.source` from config.
+    """
+    from pathlib import Path
+    try:
+        from .framework_updater import update_framework
+    except ImportError:
+        from framework_updater import update_framework
+
+    repo_root = Path(ctx.get("repo_root", Path.cwd()))
+    config = ctx.get("config") or {}
+
+    args = cmd.args or []
+    dry_run = "dry-run" in args
+    non_flags = [a for a in args if a != "dry-run"]
+    source_arg = non_flags[0] if non_flags else None
+
+    res = update_framework(repo_root=repo_root, config=config, source_arg=source_arg, dry_run=dry_run)
+    return CommandResult(
+        success=res.success,
+        message=res.message,
+        data={
+            "dry_run": res.dry_run,
+            "source_dir": str(res.source_dir),
+            "dest_dir": str(res.dest_dir),
+            "files_considered": res.files_considered,
+            "files_changed": res.files_changed,
+            "report_path": str(res.report_path) if res.report_path else None,
+            "actions": res.actions,
+        },
+    )
+
+
 @register_handler('integrator', 'apply_ready')
 def handle_apply_ready(cmd: ParsedCommand, ctx: dict) -> CommandResult:
     """

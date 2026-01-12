@@ -38,6 +38,24 @@ def default_config() -> dict[str, Any]:
         "status": {
             "status_dir": ".orchestration/runtime/status",
         },
+        "updates": {
+            # How a bootstrapped project can pull framework updates.
+            # Either set this to a local path, or to a git repo + ref.
+            # Example:
+            #   source: { type: "git", repo: "https://github.com/<org>/<repo>.git", ref: "main" }
+            # or:
+            #   source: { type: "local", path: "C:/path/to/orchestration-framework-repo" }
+            "source": None,
+            # Minimal payload to keep target projects lean.
+            "payload": [
+                "bootstrap.py",
+                "cli.py",
+                "requirements.txt",
+                "config.yaml.example",
+                "templates",
+                "tools",
+            ],
+        },
         "cursor": {
             "enabled": False,
             "auto_open_worktrees": False,

@@ -127,6 +127,12 @@ foreach ($p in $projects) {
     python .\orchestration-framework\cli.py execute "/integrator::apply_ready(dry-run)" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "apply_ready dry-run failed for $p" }
 
+    # Framework update (dry-run) using local source path to this repo
+    if ($p -eq "python-sample") {
+      python .\orchestration-framework\cli.py execute "/orchestrator::update_framework($repoRoot, dry-run)" | Out-Null
+      if ($LASTEXITCODE -ne 0) { throw "update_framework dry-run failed for $p" }
+    }
+
     # Knowledgebase + prompt refinement + status report (safe generators)
     if ($p -eq "python-sample") {
       python .\orchestration-framework\cli.py execute "/orchestrator::update_knowledge" | Out-Null
