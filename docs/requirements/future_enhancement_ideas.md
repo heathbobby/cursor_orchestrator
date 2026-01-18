@@ -7,3 +7,5 @@
 * Progressive knowledgebase building and refining functionality for target project as a whole and for the agent roles in particular
 * Progressive orchestrator/agent prompt refinement from evaluations of effectiveness of prompt during iteration validation.
 * Create a set of common project patterns that can be used by the bootstrap process to initialize a new project.  Maybe from a project template? 
+
+* Create a VS Code extension that does the same thing as the WebUI in that is allows the user to view the Agent orchestration process and current status
